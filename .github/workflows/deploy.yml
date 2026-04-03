@@ -21,15 +21,15 @@ on:
         default: true
 
 env:
-  RESOURCE_GROUP:    '3t-app-rg'
+  RESOURCE_GROUP:    '3t-app-rg1'
   LOCATION:          'australiaeast'
-  APP_SERVICE_PLAN:  'ntms-3t-plan'
-  APP_SERVICE_NAME:  'ntms3tapp'
-  FUNCTION_APP_NAME: 'ntms3tappf1'
-  SQL_SERVER_NAME:   'ntmssqlapp1'
-  SQL_DB_NAME:       'ShoppingDB'
+  APP_SERVICE_PLAN:  'ntms-3t-plan11'
+  APP_SERVICE_NAME:  'ntms3tapp11'
+  FUNCTION_APP_NAME: 'ntms3tappf111'
+  SQL_SERVER_NAME:   'ntmssqlapp111'
+  SQL_DB_NAME:       'ShoppingDB111'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage'
+  STORAGE_ACCOUNT:   'ntms3tstorage11'
 
 jobs:
 
