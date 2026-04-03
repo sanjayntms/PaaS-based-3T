@@ -29,7 +29,7 @@ env:
   SQL_SERVER_NAME:   'ntmssqlapp11'
   SQL_DB_NAME:       'ShoppingDB'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage1
+  STORAGE_ACCOUNT:   'ntms3tstorage1'
 
 jobs:
 
@@ -229,11 +229,7 @@ jobs:
 
       - name: Deploy to Azure Functions via AZ CLI
         shell: pwsh
-        run: |
-          az functionapp deployment source config-zip `
-            --resource-group ${{ env.RESOURCE_GROUP }} `
-            --name ${{ env.FUNCTION_APP_NAME }} `
-            --src ./functions.zip
+        run: az functionapp deployment source config-zip --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.FUNCTION_APP_NAME }} --src ./functions.zip
 
       - name: Azure Logout
         run: az logout
