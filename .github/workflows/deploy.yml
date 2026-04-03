@@ -21,15 +21,15 @@ on:
         default: true
 
 env:
-  RESOURCE_GROUP:    '3t-app-rg1'
+  RESOURCE_GROUP:    'ntms-3t-app-rg'
   LOCATION:          'australiaeast'
-  APP_SERVICE_PLAN:  'ntms-3t-plan1'
-  APP_SERVICE_NAME:  'ntms3tapp1'
-  FUNCTION_APP_NAME: 'ntms3tappf11'
-  SQL_SERVER_NAME:   'ntmssqlapp11'
+  APP_SERVICE_PLAN:  'ntms-ntms-3t-plan'
+  APP_SERVICE_NAME:  'ntmsntms3tapp'
+  FUNCTION_APP_NAME: 'ntmsntms3tappf1'
+  SQL_SERVER_NAME:   'ntmsntmssqlapp1'
   SQL_DB_NAME:       'ShoppingDB'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage1'
+  STORAGE_ACCOUNT:   'ntmsntms3tstorage'
 
 jobs:
 
@@ -247,6 +247,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Inject Functions URL into index.html
+        run: |
+          sed -i "s|const apiUrl = .*|const apiUrl = 'https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api';|g" ./web/index.html
+          echo "index.html updated:"
+          grep "apiUrl" ./web/index.html
+
+      - name: Inject Functions URL into owasp.html
+        run: |
+          sed -i "s|const API = .*|const API = 'https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api';|g" ./web/owasp.html
+          echo "owasp.html updated:"
+          grep "const API" ./web/owasp.html
+
       - name: Login to Azure using Service Principal
         uses: azure/login@v2
         with:
@@ -304,7 +316,7 @@ jobs:
           az sql server firewall-rule delete \
             --name GitHubRunner \
             --server ${{ env.SQL_SERVER_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} 
+            --resource-group ${{ env.RESOURCE_GROUP }}
 
       - name: Azure Logout
         run: az logout
