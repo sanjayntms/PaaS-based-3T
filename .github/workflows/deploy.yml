@@ -304,8 +304,7 @@ jobs:
           az sql server firewall-rule delete \
             --name GitHubRunner \
             --server ${{ env.SQL_SERVER_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --yes
+            --resource-group ${{ env.RESOURCE_GROUP }} 
 
       - name: Azure Logout
         run: az logout
