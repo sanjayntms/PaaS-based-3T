@@ -29,7 +29,7 @@ env:
   SQL_SERVER_NAME:   'ntmssqlapp11'
   SQL_DB_NAME:       'ShoppingDB'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage1'
+  STORAGE_ACCOUNT:   'ntms3tstorage1
 
 jobs:
 
@@ -49,7 +49,6 @@ jobs:
 
       - name: Create Resource Group
         run: |
-          # idempotent — az group create is safe to re-run
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
             --location "${{ env.LOCATION }}"
@@ -160,7 +159,6 @@ jobs:
 
       - name: Set SqlConnectionString on Function App
         run: |
-          # appsettings set is always idempotent — overwrites existing value
           az functionapp config appsettings set \
             --name ${{ env.FUNCTION_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -252,14 +250,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Inject Functions URL into index.html
-        run: |
-          sed -i "s|const apiUrl = \".*\"|const apiUrl = \"https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api\"|g" ./web/index.html
-
-      - name: Inject Functions URL into owasp.html
-        run: |
-          sed -i "s|const API = '.*'|const API = 'https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api'|g" ./web/owasp.html
 
       - name: Login to Azure using Service Principal
         uses: azure/login@v2
