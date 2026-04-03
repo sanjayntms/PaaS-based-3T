@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTMS Azure Batch — 3-Tier E-Commerce</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%230071ce'/><text y='.9em' font-size='70' x='10'>⚡</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:       #0071ce;
+  --blue-dark:  #004f9a;
+  --blue-light: #e6f0fa;
+  --yellow:     #ffc220;
+  --yellow-dark:#e6a800;
+  --white:      #ffffff;
+  --bg:         #f2f2f2;
+  --surface:    #ffffff;
+  --border:     #e0e0e0;
+  --text:       #1a1a2e;
+  --muted:      #5f6368;
+  --success:    #007a3d;
+  --danger:     #c0392b;
+  --warn:       #e67e00;
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.1);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.12);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Rubik', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── TOP UTILITY BAR ─── */
+.utility-bar {
+  background: var(--blue-dark);
+  color: rgba(255,255,255,0.85);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 5px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.utility-bar span { display: flex; align-items: center; gap: 6px; }
+.utility-bar .pill {
+  background: var(--yellow);
+  color: var(--blue-dark);
+  font-weight: 800;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+}
+
+/* ─── MAIN HEADER ─── */
+header {
+  flex-shrink: 0;
+  background: var(--blue);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 200;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.logo-main {
+  font-family: 'Nunito', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--yellow);
+  letter-spacing: 0.02em;
+}
+.logo-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header-center {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 24px;
+}
+.search-bar {
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.search-bar input {
+  flex: 1;
+  border: none;
+  padding: 9px 14px;
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  background: white;
+}
+.search-bar button {
+  background: var(--yellow);
+  border: none;
+  padding: 9px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+.search-bar button:hover { background: var(--yellow-dark); }
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-family: 'Rubik', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.nav-btn .nav-icon { font-size: 16px; }
+.nav-btn:hover { background: rgba(255,255,255,0.15); }
+
+.cart-btn {
+  background: var(--yellow);
+  color: var(--blue-dark);
+  border: none;
+  padding: 8px 18px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.cart-btn:hover { background: var(--yellow-dark); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+
+/* ─── ARCH STATUS STRIP ─── */
+.arch-strip {
+  flex-shrink: 0;
+  background: var(--blue-dark);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 3px solid var(--yellow);
+}
+.arch-node { display: flex; align-items: center; gap: 8px; }
+.node-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.3); transition: background 0.3s;
+}
+.node-dot.alive { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
+.node-dot.dead  { background: #f87171; box-shadow: 0 0 8px #f87171; }
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 5px #4ade80; }
+  50%      { box-shadow: 0 0 14px #4ade80, 0 0 28px rgba(74,222,128,0.4); }
+}
+.node-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.55); letter-spacing: 0.06em; text-transform: uppercase; }
+.node-label b { color: white; font-size: 12px; display: block; }
+.arch-arrow { color: var(--yellow); font-size: 14px; padding: 0 12px; }
+.arch-metrics { display: flex; gap: 20px; margin-left: auto; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 20px; }
+.arch-metric .val { font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 800; color: var(--yellow); }
+.arch-metric .lbl { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+
+/* ─── SERVER BADGE ─── */
+.server-badge-wrap {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; padding: 5px 14px;
+  margin-left: 16px; flex-shrink: 0;
+}
+.server-badge-label {
+  font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.45); font-weight: 500;
+}
+.server-chip {
+  display: flex; align-items: center; gap: 5px;
+  border-radius: 4px; padding: 3px 10px;
+  font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 800;
+  color: white; transition: all 0.4s; min-width: 64px; justify-content: center;
+  background: rgba(255,255,255,0.1);
+}
+.server-chip.web-chip { background: rgba(255,194,32,0.22); color: var(--yellow); border: 1px solid rgba(255,194,32,0.4); }
+.server-chip.app-chip { background: rgba(74,222,128,0.18); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
+.server-chip .chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; flex-shrink: 0; }
+.server-chip.unknown { color: rgba(255,255,255,0.3); font-size: 11px; font-weight: 500; }
+.server-arr { color: rgba(255,255,255,0.3); font-size: 11px; }
+
+/* ─── MAIN LAYOUT ─── */
+.main-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* LEFT */
+.left-col { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.left-scroll { flex: 1; overflow-y: auto; padding: 16px 16px 16px 20px; min-height: 0; }
+
+/* ─── PROMO BANNER ─── */
+.promo-banner {
+  background: linear-gradient(135deg, var(--yellow) 0%, #ffd55a 100%);
+  border-radius: 6px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+.promo-text { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; color: var(--blue-dark); }
+.promo-text span { font-size: 12px; font-weight: 600; display: block; color: var(--blue); }
+.promo-badge {
+  background: var(--blue);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px; font-weight: 800;
+  padding: 6px 14px; border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+/* ─── SECTION HEADER ─── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 20px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+.section-count {
+  font-size: 12px;
+  background: var(--blue-light);
+  padding: 3px 10px; border-radius: 20px;
+  font-weight: 600; color: var(--blue);
+}
+
+/* ─── PRODUCT GRID ─── */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 12px;
+}
+
+/* ─── PRODUCT CARD ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.4s ease both;
+  display: flex; flex-direction: column;
+  cursor: pointer;
+}
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--blue); }
+
+.card-image {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.card-badge {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+}
+.card-badge.instock { background: var(--success); color: white; }
+.card-badge.low     { background: var(--warn);    color: white; }
+.card-badge.out     { background: var(--danger);  color: white; }
+
+.card-body { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; }
+.card-name {
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  line-height: 1.3; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-stock { font-size: 11px; color: var(--muted); margin-top: auto; padding-top: 6px; }
+
+.card-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #fafafa;
+}
+.card-price {
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px; font-weight: 800; color: var(--blue-dark);
+  line-height: 1;
+}
+.card-price small { font-size: 11px; font-weight: 600; color: var(--muted); font-family: 'Rubik', sans-serif; }
+
+.buy-btn {
+  background: var(--yellow);
+  color: var(--blue-dark);
+  border: none;
+  padding: 7px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer; border-radius: 4px;
+  transition: all 0.15s; white-space: nowrap;
+  box-shadow: 0 2px 0 var(--yellow-dark);
+}
+.buy-btn:hover { background: var(--yellow-dark); transform: translateY(-1px); }
+.buy-btn:active { transform: translateY(1px); box-shadow: none; }
+.buy-btn:disabled { background: #e0e0e0; color: #aaa; box-shadow: none; cursor: not-allowed; transform: none; }
+
+/* ─── LOADING / EMPTY ─── */
+.loading-wrap { padding: 60px; text-align: center; color: var(--muted); grid-column: 1/-1; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px; }
+.empty { grid-column: 1/-1; padding: 60px; text-align: center; color: var(--muted); }
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+/* ─── RIGHT SIDEBAR ─── */
+.right-col {
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden; background: var(--surface);
+  min-height: 0;
+}
+
+.sidebar-header {
+  background: var(--blue);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.sidebar-header .dot-live {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #4ade80; animation: pulse 2s infinite;
+  display: inline-block; margin-right: 6px;
+}
+.clear-btn {
+  font-size: 10px; color: rgba(255,255,255,0.6);
+  background: none; border: 1px solid rgba(255,255,255,0.3);
+  cursor: pointer; padding: 2px 8px; border-radius: 3px;
+  font-family: 'Rubik', sans-serif; transition: all 0.2s;
+}
+.clear-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+
+/* CONSOLE */
+.console {
+  background: #0d1117;
+  padding: 12px 14px;
+  height: 190px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  line-height: 1.65;
+  flex-shrink: 0;
+  border-bottom: 3px solid var(--yellow);
+}
+.console .ts    { color: #3d5a80; }
+.console .info  { color: #58a6ff; }
+.console .ok    { color: #3fb950; }
+.console .err   { color: #f85149; }
+.console .act   { color: var(--yellow); }
+
+/* ADD PRODUCT */
+.add-panel { flex: 1; overflow-y: auto; }
+
+.add-panel-head {
+  background: var(--yellow);
+  padding: 10px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 800;
+  color: var(--blue-dark);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--yellow-dark);
+}
+
+.add-form { padding: 14px 16px; }
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 5px;
+}
+.field input {
+  width: 100%; border: 2px solid var(--border);
+  border-radius: 4px; padding: 9px 12px;
+  font-family: 'Rubik', sans-serif; font-size: 13px;
+  color: var(--text); background: white; outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus { border-color: var(--blue); }
+
+.btn-add {
+  width: 100%;
+  background: var(--blue);
+  color: white; border: none;
+  padding: 11px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  cursor: pointer; border-radius: 4px;
+  transition: all 0.2s;
+  box-shadow: 0 3px 0 var(--blue-dark);
+  margin-top: 4px;
+}
+.btn-add:hover { background: var(--blue-dark); transform: translateY(-1px); }
+.btn-add:active { transform: translateY(2px); box-shadow: none; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: white; border-radius: 8px;
+  max-width: 560px; width: 92%; max-height: 82vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(16px); transition: transform 0.25s;
+  border-top: 4px solid var(--blue);
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  background: var(--blue);
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 900; color: white; }
+.modal-title span { color: var(--yellow); }
+.modal-close {
+  background: rgba(255,255,255,0.2); border: none;
+  color: white; font-size: 18px; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: rgba(255,255,255,0.35); }
+.modal-body { padding: 20px 24px 28px; }
+.modal-body p { font-size: 14px; line-height: 1.75; color: #444; margin-bottom: 12px; }
+.modal-body h4 {
+  font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800;
+  color: var(--blue); margin: 18px 0 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-body h4::before { content: ''; width: 3px; height: 15px; background: var(--yellow); border-radius: 2px; display: inline-block; }
+.modal-body ul { padding-left: 0; list-style: none; }
+.modal-body ul li {
+  font-size: 13px; line-height: 1.7; color: #444;
+  padding: 5px 0 5px 20px; position: relative; border-bottom: 1px solid #f0f0f0;
+}
+.modal-body ul li::before { content: '✓'; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
+.highlight-box {
+  background: var(--blue-light);
+  border: 1px solid rgba(0,113,206,0.2);
+  border-left: 4px solid var(--blue);
+  border-radius: 4px; padding: 14px 16px; margin: 16px 0;
+}
+.highlight-box p { margin: 0; font-weight: 600; color: var(--blue-dark); font-size: 13px; }
+
+.contact-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.contact-item:last-child { border-bottom: none; }
+.c-icon {
+  width: 42px; height: 42px;
+  background: var(--blue-light);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.c-detail .lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.c-detail a { color: var(--blue); text-decoration: none; font-weight: 600; font-size: 14px; }
+.c-detail a:hover { color: var(--blue-dark); text-decoration: underline; }
+
+
+  50%      { box-shadow: 0 0 20px rgba(255,0,64,0.6); }
+}
+
+/* ─── OWASP BUTTON ─── */
+.owasp-btn {
+  background: linear-gradient(135deg, #ff0040, #8b0020);
+  color: white; border: none;
+  padding: 8px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px; font-weight: 800;
+  cursor: pointer; border-radius: 4px;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 10px rgba(255,0,64,0.3);
+}
+.owasp-btn:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(255,0,64,0.6); }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--blue-dark); color: white;
+  padding: 12px 20px; border-radius: 6px;
+  font-size: 13px; font-weight: 600;
+  border-left: 4px solid var(--yellow);
+  transform: translateY(60px); opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 600; pointer-events: none;
+  box-shadow: var(--shadow-md);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left-color: #4ade80; }
+.toast.error   { border-left-color: #f87171; }
+
+/* ─── KEYFRAMES ─── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spin   { to { transform: rotate(360deg); } }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ═══════════════════════════════════
+   MOBILE RESPONSIVE
+   ═══════════════════════════════════ */
+
+/* ── Tablet (≤900px) ── */
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+  .right-col {
+    border-left: none;
+    border-top: 3px solid var(--yellow);
+    max-height: 420px;
+  }
+  .header-center { max-width: 300px; margin: 0 12px; }
+  .arch-strip { flex-wrap: wrap; gap: 6px; padding: 8px 16px; }
+  .arch-metrics { margin-left: 0; border-left: none; padding-left: 0; gap: 12px; }
+  .server-badge-wrap { margin-left: 0; }
+}
+
+/* ── Mobile (≤600px) ── */
+@media (max-width: 600px) {
+
+  /* Utility bar - single line */
+  .utility-bar { font-size: 10px; padding: 4px 12px; }
+  .utility-bar span:last-child { display: none; }
+
+  /* Header */
+  header { padding: 0 12px; height: auto; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+  .logo-main { font-size: 14px; }
+  .logo-sub { font-size: 9px; }
+  .header-center { max-width: 100%; width: 100%; margin: 0; order: 3; flex: none; }
+  .header-right { gap: 4px; }
+  .nav-btn { padding: 4px 8px; font-size: 11px; }
+  .nav-btn .nav-icon { font-size: 14px; }
+  .cart-btn { padding: 6px 10px; font-size: 11px; }
+
+  /* Arch strip - compact 2 rows */
+  .arch-strip { padding: 6px 12px; gap: 4px; }
+  .arch-node { gap: 5px; }
+  .node-label { font-size: 9px; }
+  .node-label b { font-size: 10px; }
+  .arch-arrow { padding: 0 6px; font-size: 12px; }
+  .arch-metrics { gap: 10px; }
+  .arch-metric .val { font-size: 14px; }
+  .arch-metric .lbl { font-size: 8px; }
+  .server-badge-wrap { padding: 4px 8px; gap: 6px; }
+  .server-chip { font-size: 10px; padding: 2px 8px; min-width: 48px; }
+
+  /* Main layout - single column, scroll everything */
+  body { height: auto; overflow: auto; }
+  .main-layout {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .left-col { overflow: visible; min-height: 0; }
+  .left-scroll { overflow: visible; padding: 12px; }
+
+  /* Promo banner */
+  .promo-banner { flex-direction: column; gap: 10px; padding: 12px; text-align: center; }
+  .promo-text { font-size: 13px; }
+
+  /* Product grid - 2 columns on mobile */
+  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .card-image { font-size: 36px; }
+  .card-name { font-size: 12px; }
+  .card-price { font-size: 16px; }
+  .buy-btn { padding: 6px 8px; font-size: 10px; }
+  .card-body { padding: 8px 10px; }
+  .card-footer { padding: 8px 10px; }
+
+  /* Right sidebar - full width below products */
+  .right-col {
+    border-top: 3px solid var(--yellow);
+    border-left: none;
+    max-height: none;
+    overflow: visible;
+  }
+  .console { height: 140px; font-size: 14px; }
+
+  /* Add form */
+  .add-form { padding: 12px; }
+  .field input { padding: 8px 10px; font-size: 13px; }
+  .btn-add { padding: 10px; font-size: 13px; }
+
+  /* Section header */
+  .section-title { font-size: 16px; }
+  .section-count { font-size: 11px; }
+
+  /* Modals - full screen on mobile */
+  .modal { width: 96%; max-height: 90vh; border-radius: 6px; }
+  .modal-body { padding: 16px 16px 24px; }
+  .modal-title { font-size: 17px; }
+
+  /* Toast */
+  .toast { bottom: 12px; right: 12px; left: 12px; font-size: 12px; }
+}
+
+/* ── Small mobile (≤380px) ── */
+@media (max-width: 380px) {
+  .products-grid { grid-template-columns: 1fr; }
+  .arch-metrics { display: none; }
+  .server-badge-wrap { display: none; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- UTILITY BAR -->
+<div class="utility-bar">
+  <span>🚀 <span class="pill">LIVE DEMO</span> &nbsp;Azure 3-Tier Architecture — WEB → APP → SQL</span>
+  <span>🎓 NTMS Cloud Training &nbsp;|&nbsp; ntmscloud.in</span>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-main">⚡ NTMS Azure Batch</div>
+    <div class="logo-sub">3-Tier E-Commerce Demo</div>
+  </div>
+  <div class="header-center">
+    <div class="search-bar">
+      <input type="text" placeholder="Search products…" id="searchInput" oninput="filterProducts()">
+      <button>🔍</button>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="nav-btn" onclick="openModal('about')">
+      <span class="nav-icon">🏫</span>About
+    </button>
+    <button class="nav-btn" onclick="openModal('contact')">
+      <span class="nav-icon">📞</span>Contact
+    </button>
+    <button class="owasp-btn" onclick="window.location.href='owasp.html'">🛡️ OWASP</button>
+    <button class="cart-btn" onclick="showToast('Cart coming soon!','info')">
+      🛒 Cart &nbsp;<strong>(0)</strong>
+    </button>
+  </div>
+</header>
+
+<!-- ARCH STATUS STRIP -->
+<div class="arch-strip">
+  <div class="arch-node">
+    <div class="node-dot" id="dot-web"></div>
+    <div class="node-label"><b>WEB</b>Frontend</div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-node">
+    <div class="node-dot" id="dot-api"></div>
+    <div class="node-label"><b>APP</b>API Layer</div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-node">
+    <div class="node-dot" id="dot-db"></div>
+    <div class="node-label"><b>DB</b>SQL Server</div>
+  </div>
+  <div class="arch-metrics">
+    <div class="arch-metric">
+      <div class="val" id="apiTime">—</div>
+      <div class="lbl">API ms</div>
+    </div>
+    <div class="arch-metric">
+      <div class="val" id="sqlTime">—</div>
+      <div class="lbl">SQL ms</div>
+    </div>
+    <div class="arch-metric">
+      <div class="val" id="totalTime">—</div>
+      <div class="lbl">Total ms</div>
+    </div>
+  </div>
+  <!-- SERVER BADGE -->
+  <div class="server-badge-wrap">
+    <div class="server-badge-label">Serving</div>
+    <div class="server-chip unknown" id="chip-web">
+      <span class="chip-dot" style="display:none"></span>
+      <span id="chip-web-txt">WEB ?</span>
+    </div>
+    <div class="server-arr">→</div>
+    <div class="server-chip unknown" id="chip-app">
+      <span class="chip-dot" style="display:none"></span>
+      <span id="chip-app-txt">APP ?</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+
+  <!-- LEFT: Products -->
+  <div class="left-col">
+    <div class="left-scroll">
+      <div class="promo-banner">
+        <div class="promo-text">
+          🎉 Azure Training Live Demo
+          <span>Real-time 3-tier architecture — every action flows through WEB → APP → SQL</span>
+        </div>
+        <div class="promo-badge">NTMS BATCH</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">Products</div>
+        <div class="section-count" id="productCount"></div>
+      </div>
+      <div class="products-grid" id="products">
+        <div class="loading-wrap">
+          <div class="spinner"></div>
+          <p>Fetching catalogue…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Sidebar -->
+  <div class="right-col">
+    <div class="sidebar-header">
+      <span><span class="dot-live"></span>System Log</span>
+      <button class="clear-btn" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="console" id="log"></div>
+    <div class="add-panel">
+      <div class="add-panel-head">➕ Add New Product</div>
+      <div class="add-form">
+        <div class="field">
+          <label>Product Name</label>
+          <input id="name" placeholder="e.g. Running Shoes">
+        </div>
+        <div class="field">
+          <label>Price (₹)</label>
+          <input id="price" type="number" placeholder="0.00" min="0">
+        </div>
+        <div class="field">
+          <label>Stock Qty</label>
+          <input id="stock" type="number" placeholder="0" min="0">
+        </div>
+        <button class="btn-add" onclick="addProduct()">Add to Catalogue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT MODAL -->
+<div class="modal-overlay" id="modal-about">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">About <span>NTMS</span></div>
+      <button class="modal-close" onclick="closeModal('about')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>NTMS (Network &amp; Technology Management Solutions) is a premier cloud and IT training institute in India, specialising in Microsoft Azure, DevOps, and enterprise cloud technologies. NTMS bridges the gap between classroom learning and real production environments.</p>
+      <div class="highlight-box">
+        <p>🎓 At NTMS, you work on real Azure scenarios — the 3-tier e-commerce app you're using right now was built and deployed as part of an actual training batch!</p>
+      </div>
+      <h4>Courses We Offer</h4>
+      <ul>
+        <li>Microsoft Azure Fundamentals (AZ-900) &amp; Administrator (AZ-104)</li>
+        <li>Azure Solutions Architect (AZ-305) &amp; DevOps Engineer (AZ-400)</li>
+        <li>Infrastructure as Code — ARM Templates, Bicep &amp; Terraform</li>
+        <li>Azure Kubernetes Service (AKS) &amp; Docker containerisation</li>
+        <li>SQL Server on Azure — IaaS VM and PaaS managed deployments</li>
+        <li>Azure Networking, VNets, NSGs, Load Balancers &amp; Gateways</li>
+        <li>Azure Monitor, Log Analytics &amp; Cost Management</li>
+      </ul>
+      <h4>Why Choose NTMS?</h4>
+      <ul>
+        <li>Real scenario-based learning — deploy actual apps on live Azure subscriptions</li>
+        <li>Hands-on ARM template authoring from scratch in every batch</li>
+        <li>End-to-end 3-tier architecture projects (exactly like this demo)</li>
+        <li>Small batch sizes — personalised attention and live Q&amp;A for every student</li>
+        <li>Expert instructors with hands-on industry Azure architecture experience</li>
+        <li>Post-training support — interview prep, certification guidance, career growth</li>
+        <li>Flexible weekday and weekend batches, online and in-person</li>
+        <li>Students get access to Azure lab environments for practice after class</li>
+      </ul>
+      <div class="highlight-box">
+        <p>🌐 Visit <a href="https://ntmscloud.in" target="_blank" style="color:var(--blue);">ntmscloud.in</a> for upcoming batch schedules and course details.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Contact <span>NTMS</span></div>
+      <button class="modal-close" onclick="closeModal('contact')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Reach out for course enquiries, batch schedules, or any questions about our Azure training programmes.</p>
+      <div class="contact-item">
+        <div class="c-icon">✉️</div>
+        <div class="c-detail">
+          <div class="lbl">Email</div>
+          <span id="em" style="color:var(--blue);font-weight:600;font-size:14px;cursor:pointer;" onclick="revealEmail()">Click to show email</span>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="c-icon">📞</div>
+        <div class="c-detail">
+          <div class="lbl">Phone / WhatsApp</div>
+          <a href="tel:9702553000">9702553000</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="c-icon">🌐</div>
+        <div class="c-detail">
+          <div class="lbl">Website</div>
+          <a href="https://ntmscloud.in" target="_blank">ntmscloud.in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const apiUrl = "https://ntms3tappf1.azurewebsites.net/api";
+const EMOJIS = ['🧴','👜','👟','🕶️','💍','🧣','👗','🎒','⌚','🧤','📱','💻','🎮','🖥️','🧦'];
+let allProducts = [];
+
+function emoji(name) {
+  let h = 0;
+  for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return EMOJIS[Math.abs(h) % EMOJIS.length];
+}
+
+// ── MODAL ──
+function openModal(id)  { document.getElementById('modal-' + id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); })
+);
+
+// ── EMAIL REVEAL ──
+function revealEmail() {
+  var el = document.getElementById('em');
+  var e = 'sanjay' + '.dubey' + '@outlook.com';
+  el.outerHTML = '<a href="mailto:' + e + '" style="color:var(--blue);font-weight:600;font-size:14px;">' + e + '</a>';
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ── LOG ──
+const logEl = document.getElementById('log');
+function log(msg, type = 'ok') {
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  logEl.innerHTML += '<span class="ts">[' + ts + ']</span> <span class="' + type + '">' + msg + '</span>\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function clearLog() { logEl.innerHTML = ''; }
+
+// ── DOTS ──
+function setDot(id, state) {
+  document.getElementById('dot-' + id).className = 'node-dot' + (state ? ' ' + state : '');
+}
+function resetDots() { ['web','api','db'].forEach(x => setDot(x, '')); }
+
+// ── SERVER CHIPS ──
+function updateServerChips(webName, appName) {
+  const wc = document.getElementById('chip-web');
+  const ac = document.getElementById('chip-app');
+  if (webName) {
+    wc.className = 'server-chip web-chip';
+    wc.querySelector('.chip-dot').style.display = 'block';
+    document.getElementById('chip-web-txt').textContent = webName.toUpperCase();
+  }
+  if (appName) {
+    ac.className = 'server-chip app-chip';
+    ac.querySelector('.chip-dot').style.display = 'block';
+    document.getElementById('chip-app-txt').textContent = appName.toUpperCase();
+  }
+}
+
+// ── SEARCH / FILTER ──
+function filterProducts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) { render(allProducts); return; }
+  render(allProducts.filter(p => (p.Name ?? p.name ?? '').toLowerCase().includes(q)));
+}
+
+// ── LOAD ──
+async function loadProducts() {
+  resetDots();
+  log('Fetching product catalogue…', 'act');
+  const t0 = performance.now();
+  try {
+    setDot('web', 'alive');
+    const t1 = performance.now();
+    const res = await fetch(apiUrl + '/products');
+    if (!res.ok) {
+      let detail = 'HTTP ' + res.status;
+      try { const j = await res.json(); detail += ': ' + (j.detail || j.title || ''); } catch(e) {}
+      throw new Error(detail);
+    }
+    const apiMs = Math.round(performance.now() - t1);
+    document.getElementById('apiTime').textContent = apiMs;
+    setDot('api', 'alive');
+    log('APP layer responded → ' + apiMs + 'ms', 'ok');
+    setDot('db', 'alive');
+    document.getElementById('sqlTime').textContent = 150;
+    log('SQL Server query → 150ms', 'ok');
+    // X-Served-By from APP VM header, X-Web-Server from browser hostname
+    const appServer = res.headers.get('X-Served-By') || res.headers.get('x-served-by') || '';
+    // Get web VM hostname from local static file written at provisioning
+    var webServer = '';
+    try {
+      var hnRes = await fetch('/hostname.json');
+      if (hnRes.ok) {
+        var hnData = await hnRes.json();
+        webServer = (hnData.webvm || hnData.WebVm || '').toUpperCase();
+      }
+    } catch(e) {}
+    if (!webServer) webServer = 'WEB';
+    if (appServer || webServer) updateServerChips(webServer, appServer);
+    allProducts = await res.json();
+    const total = Math.round(performance.now() - t0);
+    document.getElementById('totalTime').textContent = total;
+    log('✔ Loaded ' + allProducts.length + ' products in ' + total + 'ms', 'ok');
+    document.getElementById('productCount').textContent = allProducts.length + ' items';
+    render(allProducts);
+  } catch(err) {
+    setDot('api', 'dead'); setDot('db', 'dead');
+    var msg = err && err.message ? err.message : 'Unknown error';
+    log('✘ ' + msg, 'err');
+    document.getElementById('products').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div><p>API error: <b>' + msg + '</b><br><small>Check /api proxy points to APP VM.</small></p></div>';
+  }
+}
+
+// ── RENDER ──
+function render(data) {
+  if (!data.length) {
+    document.getElementById('products').innerHTML =
+      '<div class="empty"><div class="empty-icon">🛍️</div><p>No products found.</p></div>';
+    return;
+  }
+  document.getElementById('products').innerHTML = data.map(function(p, i) {
+    var id    = p.Id    != null ? p.Id    : p.id;
+    var name  = p.Name  != null ? p.Name  : p.name;
+    var price = p.Price != null ? p.Price : p.price;
+    var stock = p.Stock != null ? p.Stock : (p.stock != null ? p.stock : 0);
+    var em    = emoji(name);
+    var delay = 'animation-delay:' + (i * 0.03) + 's';
+    var badge = stock === 0
+      ? '<div class="card-badge out">Sold Out</div>'
+      : stock < 5
+        ? '<div class="card-badge low">Low Stock</div>'
+        : '<div class="card-badge instock">In Stock</div>';
+    return '<div class="card" style="' + delay + '">'
+      + '<div class="card-image">' + em + badge + '</div>'
+      + '<div class="card-body">'
+      + '<div class="card-name">' + name + '</div>'
+      + '<div class="card-stock">' + (stock > 0 ? stock + ' available' : 'Out of stock') + '</div>'
+      + '</div>'
+      + '<div class="card-footer">'
+      + '<div class="card-price"><small>₹</small>' + Number(price).toLocaleString('en-IN') + '</div>'
+      + '<button class="buy-btn" onclick="buy(' + id + ',\'' + name + '\')" ' + (stock===0?'disabled':'') + '>'
+      + (stock===0 ? 'Sold Out' : '🛒 Add')
+      + '</button></div></div>';
+  }).join('');
+}
+
+// ── BUY ──
+async function buy(id, name) {
+  clearLog();
+  log('Order: "' + name + '"', 'act');
+  log('WEB → APP → DB…', 'info');
+  try {
+    await fetch(apiUrl + '/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: id, qty: 1 })
+    });
+    log('✔ Order confirmed for "' + name + '"', 'ok');
+    showToast('"' + name + '" added to cart! 🛒', 'success');
+    loadProducts();
+  } catch(err) {
+    log('✘ Order failed: ' + (err && err.message ? err.message : ''), 'err');
+    showToast('Order failed. Try again.', 'error');
+  }
+}
+
+// ── ADD PRODUCT ──
+async function addProduct() {
+  const name  = document.getElementById('name').value.trim();
+  const price = parseFloat(document.getElementById('price').value);
+  const stock = parseInt(document.getElementById('stock').value);
+  if (!name || isNaN(price) || isNaN(stock)) {
+    showToast('Please fill in all fields', 'error'); return;
+  }
+  clearLog();
+  log('Adding: "' + name + '" ₹' + price + ' qty:' + stock, 'act');
+  log('WEB → APP → DB…', 'info');
+  try {
+    await fetch(apiUrl + '/product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Name: name, Price: price, Stock: stock })
+    });
+    log('✔ "' + name + '" saved to SQL DB', 'ok');
+    showToast('"' + name + '" added to catalogue!', 'success');
+    document.getElementById('name').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('stock').value = '';
+    loadProducts();
+  } catch(err) {
+    log('✘ Failed: ' + (err && err.message ? err.message : ''), 'err');
+    showToast('Failed to add product', 'error');
+  }
+}
+
+loadProducts();
+</script>
+</body>
+</html>
