@@ -23,13 +23,13 @@ on:
 env:
   RESOURCE_GROUP:    '3t-app-rg1'
   LOCATION:          'australiaeast'
-  APP_SERVICE_PLAN:  'ntms-3t-plan11'
-  APP_SERVICE_NAME:  'ntms3tapp11'
-  FUNCTION_APP_NAME: 'ntms3tappf111'
-  SQL_SERVER_NAME:   'ntmssqlapp111'
-  SQL_DB_NAME:       'ShoppingDB111'
+  APP_SERVICE_PLAN:  'ntms-3t-plan1'
+  APP_SERVICE_NAME:  'ntms3tapp1'
+  FUNCTION_APP_NAME: 'ntms3tappf11'
+  SQL_SERVER_NAME:   'ntmssqlapp11'
+  SQL_DB_NAME:       'ShoppingDB'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage11'
+  STORAGE_ACCOUNT:   'ntms3tstorage1'
 
 jobs:
 
@@ -92,7 +92,7 @@ jobs:
               --name ${{ env.APP_SERVICE_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --plan ${{ env.APP_SERVICE_PLAN }} \
-              --runtime "DOTNET|8.0"
+              --runtime "dotnet:8"
           else
             echo "App Service already exists, skipping."
           fi
