@@ -21,15 +21,15 @@ on:
         default: true
 
 env:
-  RESOURCE_GROUP:    '3t-app-rg1'
+  RESOURCE_GROUP:    '3t-app-rg'
   LOCATION:          'australiaeast'
   APP_SERVICE_PLAN:  'ntms-3t-plan'
-  APP_SERVICE_NAME:  'ntms3tapp1'
-  FUNCTION_APP_NAME: 'ntms3tappf11'
-  SQL_SERVER_NAME:   'ntmssqlapp11'
+  APP_SERVICE_NAME:  'ntms3tapp'
+  FUNCTION_APP_NAME: 'ntms3tappf1'
+  SQL_SERVER_NAME:   'ntmssqlapp1'
   SQL_DB_NAME:       'ShoppingDB'
   SQL_ADMIN_USER:    'vmadmin'
-  STORAGE_ACCOUNT:   'ntms3tstorage11'
+  STORAGE_ACCOUNT:   'ntms3tstorage'
 
 jobs:
 
@@ -49,68 +49,105 @@ jobs:
 
       - name: Create Resource Group
         run: |
+          # idempotent — az group create is safe to re-run
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
             --location "${{ env.LOCATION }}"
 
-      - name: Create Storage Account (required for Functions)
+      - name: Create Storage Account
         run: |
-          az storage account create \
+          if ! az storage account show \
             --name ${{ env.STORAGE_ACCOUNT }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --location "${{ env.LOCATION }}" \
-            --sku Standard_LRS \
-            --kind StorageV2
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az storage account create \
+              --name ${{ env.STORAGE_ACCOUNT }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location "${{ env.LOCATION }}" \
+              --sku Standard_LRS \
+              --kind StorageV2
+          else
+            echo "Storage account already exists, skipping."
+          fi
 
       - name: Create App Service Plan
         run: |
-          az appservice plan create \
+          if ! az appservice plan show \
             --name ${{ env.APP_SERVICE_PLAN }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --location "${{ env.LOCATION }}" \
-            --sku B1 \
-            --is-linux false
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az appservice plan create \
+              --name ${{ env.APP_SERVICE_PLAN }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location "${{ env.LOCATION }}" \
+              --sku B1
+          else
+            echo "App Service Plan already exists, skipping."
+          fi
 
       - name: Create App Service (Web Frontend)
         run: |
-          az webapp create \
+          if ! az webapp show \
             --name ${{ env.APP_SERVICE_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --plan ${{ env.APP_SERVICE_PLAN }} \
-            --runtime "DOTNET|8.0"
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az webapp create \
+              --name ${{ env.APP_SERVICE_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --plan ${{ env.APP_SERVICE_PLAN }} \
+              --runtime "DOTNET|8.0"
+          else
+            echo "App Service already exists, skipping."
+          fi
 
       - name: Create Function App
         run: |
-          az functionapp create \
+          if ! az functionapp show \
             --name ${{ env.FUNCTION_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --storage-account ${{ env.STORAGE_ACCOUNT }} \
-            --consumption-plan-location "${{ env.LOCATION }}" \
-            --runtime dotnet-isolated \
-            --runtime-version 8 \
-            --functions-version 4 \
-            --os-type Windows
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az functionapp create \
+              --name ${{ env.FUNCTION_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --storage-account ${{ env.STORAGE_ACCOUNT }} \
+              --consumption-plan-location "${{ env.LOCATION }}" \
+              --runtime dotnet-isolated \
+              --runtime-version 8 \
+              --functions-version 4 \
+              --os-type Windows
+          else
+            echo "Function App already exists, skipping."
+          fi
 
       - name: Create SQL Server
         run: |
-          az sql server create \
+          if ! az sql server show \
             --name ${{ env.SQL_SERVER_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --location "${{ env.LOCATION }}" \
-            --admin-user ${{ env.SQL_ADMIN_USER }} \
-            --admin-password "${{ secrets.SQL_ADMIN_PASSWORD }}"
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az sql server create \
+              --name ${{ env.SQL_SERVER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location "${{ env.LOCATION }}" \
+              --admin-user ${{ env.SQL_ADMIN_USER }} \
+              --admin-password "${{ secrets.SQL_ADMIN_PASSWORD }}"
+          else
+            echo "SQL Server already exists, skipping."
+          fi
 
-      - name: Create SQL Database (Serverless tier - auto pauses when idle)
+      - name: Create SQL Database
         run: |
-          az sql db create \
+          if ! az sql db show \
             --name ${{ env.SQL_DB_NAME }} \
             --server ${{ env.SQL_SERVER_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --edition GeneralPurpose \
-            --family Gen5 \
-            --capacity 2 \
-            --compute-model Serverless \
-            --auto-pause-delay 60
+            --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            az sql db create \
+              --name ${{ env.SQL_DB_NAME }} \
+              --server ${{ env.SQL_SERVER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --edition GeneralPurpose \
+              --family Gen5 \
+              --capacity 2 \
+              --compute-model Serverless \
+              --auto-pause-delay 60
+          else
+            echo "SQL Database already exists, skipping."
+          fi
 
       - name: Allow Azure Services to access SQL
         run: |
@@ -119,10 +156,11 @@ jobs:
             --server ${{ env.SQL_SERVER_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --start-ip-address 0.0.0.0 \
-            --end-ip-address 0.0.0.0
+            --end-ip-address 0.0.0.0 || true
 
       - name: Set SqlConnectionString on Function App
         run: |
+          # appsettings set is always idempotent — overwrites existing value
           az functionapp config appsettings set \
             --name ${{ env.FUNCTION_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -133,7 +171,7 @@ jobs:
           az functionapp cors add \
             --name ${{ env.FUNCTION_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --allowed-origins "https://${{ env.APP_SERVICE_NAME }}.azurewebsites.net"
+            --allowed-origins "https://${{ env.APP_SERVICE_NAME }}.azurewebsites.net" || true
 
       - name: Enable SCM Basic Auth on Function App
         run: |
