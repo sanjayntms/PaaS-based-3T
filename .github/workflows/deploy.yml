@@ -1,1 +1,287 @@
+name: Deploy 3-Tier PaaS App
 
+on:
+  workflow_dispatch:
+    inputs:
+      create_infra:
+        description: 'Create Azure Infrastructure'
+        type: boolean
+        default: true
+      deploy_functions:
+        description: 'Deploy Azure Functions (App Tier)'
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: 'Deploy Frontend (App Service)'
+        type: boolean
+        default: true
+      deploy_sql:
+        description: 'Deploy SQL Schema (Azure SQL)'
+        type: boolean
+        default: true
+
+env:
+  RESOURCE_GROUP:    '3t-app-rg1'
+  LOCATION:          'australiaeast'
+  APP_SERVICE_PLAN:  'ntms-3t-plan'
+  APP_SERVICE_NAME:  'ntms3tapp1'
+  FUNCTION_APP_NAME: 'ntms3tappf11'
+  SQL_SERVER_NAME:   'ntmssqlapp11'
+  SQL_DB_NAME:       'ShoppingDB'
+  SQL_ADMIN_USER:    'vmadmin'
+  STORAGE_ACCOUNT:   'ntms3tstorage11'
+
+jobs:
+
+  # ═══════════════════════════════════════════════════════════
+  # JOB 1 — CREATE AZURE INFRASTRUCTURE
+  # ═══════════════════════════════════════════════════════════
+  create-infra:
+    name: Create Azure Infrastructure
+    runs-on: ubuntu-latest
+    if: ${{ inputs.create_infra }}
+
+    steps:
+      - name: Login to Azure using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name ${{ env.RESOURCE_GROUP }} \
+            --location "${{ env.LOCATION }}"
+
+      - name: Create Storage Account (required for Functions)
+        run: |
+          az storage account create \
+            --name ${{ env.STORAGE_ACCOUNT }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --location "${{ env.LOCATION }}" \
+            --sku Standard_LRS \
+            --kind StorageV2
+
+      - name: Create App Service Plan
+        run: |
+          az appservice plan create \
+            --name ${{ env.APP_SERVICE_PLAN }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --location "${{ env.LOCATION }}" \
+            --sku B1 \
+            --is-linux false
+
+      - name: Create App Service (Web Frontend)
+        run: |
+          az webapp create \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --plan ${{ env.APP_SERVICE_PLAN }} \
+            --runtime "DOTNET|8.0"
+
+      - name: Create Function App
+        run: |
+          az functionapp create \
+            --name ${{ env.FUNCTION_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --storage-account ${{ env.STORAGE_ACCOUNT }} \
+            --consumption-plan-location "${{ env.LOCATION }}" \
+            --runtime dotnet-isolated \
+            --runtime-version 8 \
+            --functions-version 4 \
+            --os-type Windows
+
+      - name: Create SQL Server
+        run: |
+          az sql server create \
+            --name ${{ env.SQL_SERVER_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --location "${{ env.LOCATION }}" \
+            --admin-user ${{ env.SQL_ADMIN_USER }} \
+            --admin-password "${{ secrets.SQL_ADMIN_PASSWORD }}"
+
+      - name: Create SQL Database (Serverless tier - auto pauses when idle)
+        run: |
+          az sql db create \
+            --name ${{ env.SQL_DB_NAME }} \
+            --server ${{ env.SQL_SERVER_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --edition GeneralPurpose \
+            --family Gen5 \
+            --capacity 2 \
+            --compute-model Serverless \
+            --auto-pause-delay 60
+
+      - name: Allow Azure Services to access SQL
+        run: |
+          az sql server firewall-rule create \
+            --name AllowAzureServices \
+            --server ${{ env.SQL_SERVER_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --start-ip-address 0.0.0.0 \
+            --end-ip-address 0.0.0.0
+
+      - name: Set SqlConnectionString on Function App
+        run: |
+          az functionapp config appsettings set \
+            --name ${{ env.FUNCTION_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings "SqlConnectionString=Server=tcp:${{ env.SQL_SERVER_NAME }}.database.windows.net,1433;Initial Catalog=${{ env.SQL_DB_NAME }};User ID=${{ env.SQL_ADMIN_USER }};Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;"
+
+      - name: Enable CORS on Function App
+        run: |
+          az functionapp cors add \
+            --name ${{ env.FUNCTION_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --allowed-origins "https://${{ env.APP_SERVICE_NAME }}.azurewebsites.net"
+
+      - name: Enable SCM Basic Auth on Function App
+        run: |
+          az resource update \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name scm \
+            --namespace Microsoft.Web \
+            --resource-type basicPublishingCredentialsPolicies \
+            --parent sites/${{ env.FUNCTION_APP_NAME }} \
+            --set properties.allow=true
+
+      - name: Enable SCM Basic Auth on App Service
+        run: |
+          az resource update \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name scm \
+            --namespace Microsoft.Web \
+            --resource-type basicPublishingCredentialsPolicies \
+            --parent sites/${{ env.APP_SERVICE_NAME }} \
+            --set properties.allow=true
+
+      - name: Azure Logout
+        run: az logout
+
+  # ═══════════════════════════════════════════════════════════
+  # JOB 2 — DEPLOY AZURE FUNCTIONS CODE
+  # ═══════════════════════════════════════════════════════════
+  deploy-functions:
+    name: Deploy Azure Functions
+    runs-on: windows-latest
+    if: ${{ inputs.deploy_functions }}
+    needs: [create-infra]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./ShoppingAPI/ShoppingAPI.csproj
+
+      - name: Build and Publish
+        run: dotnet publish ./ShoppingAPI/ShoppingAPI.csproj -c Release -o ./publish
+
+      - name: Zip publish output
+        shell: pwsh
+        run: Compress-Archive -Path ./publish/* -DestinationPath ./functions.zip
+
+      - name: Login to Azure using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions via AZ CLI
+        shell: pwsh
+        run: |
+          az functionapp deployment source config-zip `
+            --resource-group ${{ env.RESOURCE_GROUP }} `
+            --name ${{ env.FUNCTION_APP_NAME }} `
+            --src ./functions.zip
+
+      - name: Azure Logout
+        run: az logout
+
+  # ═══════════════════════════════════════════════════════════
+  # JOB 3 — DEPLOY FRONTEND TO APP SERVICE
+  # ═══════════════════════════════════════════════════════════
+  deploy-frontend:
+    name: Deploy App Service Frontend
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy_frontend }}
+    needs: [create-infra]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Inject Functions URL into index.html
+        run: |
+          sed -i "s|const apiUrl = \".*\"|const apiUrl = \"https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api\"|g" ./web/index.html
+
+      - name: Inject Functions URL into owasp.html
+        run: |
+          sed -i "s|const API = '.*'|const API = 'https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net/api'|g" ./web/owasp.html
+
+      - name: Login to Azure using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Zip web folder and deploy to App Service
+        run: |
+          cd ./web && zip -r ../web.zip . && cd ..
+          az webapp deployment source config-zip \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --src ./web.zip
+
+      - name: Azure Logout
+        run: az logout
+
+  # ═══════════════════════════════════════════════════════════
+  # JOB 4 — DEPLOY SQL SCHEMA
+  # ═══════════════════════════════════════════════════════════
+  deploy-sql:
+    name: Deploy SQL Schema
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy_sql }}
+    needs: [create-infra]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure using Service Principal
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Add GitHub runner IP to SQL firewall
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "Runner public IP: $RUNNER_IP"
+          az sql server firewall-rule create \
+            --name GitHubRunner \
+            --server ${{ env.SQL_SERVER_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --start-ip-address $RUNNER_IP \
+            --end-ip-address $RUNNER_IP
+
+      - name: Run SQL schema script
+        uses: azure/sql-action@v2
+        with:
+          connection-string: "Server=tcp:${{ env.SQL_SERVER_NAME }}.database.windows.net,1433;Initial Catalog=${{ env.SQL_DB_NAME }};User ID=${{ env.SQL_ADMIN_USER }};Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;"
+          path: ./db.txt
+
+      - name: Remove GitHub runner IP from SQL firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --name GitHubRunner \
+            --server ${{ env.SQL_SERVER_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --yes
+
+      - name: Azure Logout
+        run: az logout
